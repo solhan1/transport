@@ -27,7 +27,7 @@ namespace TransportAutomation
                     try
                     {
                         WordprocessingDocument document = d.openWordDocument(fileName, true);
-                        // Body docBody = d.getWordDocumentBody(document);
+                        Body docBody = d.getWordDocumentBody(document);
                         int tableCounter;
                         int rowCounter;
                         int numRows;
@@ -60,8 +60,23 @@ namespace TransportAutomation
                                 Console.Write("\n");
                             }
                             Console.Write("\n");
-                        } 
-                        
+                        }
+
+                        // other comments
+                        Paragraph otherComments = docBody.Elements<Paragraph>().ElementAt(10);
+                        Console.WriteLine("\n" + otherComments.InnerText);
+                        Paragraph completedByParagraph = docBody.Elements<Paragraph>().ElementAt(12);
+                        string completedByParagraphText = completedByParagraph.InnerText;
+                        int index = completedByParagraphText.IndexOf("Version");
+                        string completedByText;
+                        string versionText;
+                        if (index != -1)
+                        {
+                            completedByText = completedByParagraphText.Substring(0, index);
+                            versionText = completedByParagraphText.Substring(index);
+                            Console.WriteLine(completedByText);
+                            Console.WriteLine(versionText);
+                        }
                         // commented out code for writing to word doc
                         //Paragraph para = docBody.AppendChild(new Paragraph());
                         //Run run = para.AppendChild(new Run());
