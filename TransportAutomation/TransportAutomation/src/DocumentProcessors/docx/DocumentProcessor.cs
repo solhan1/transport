@@ -68,6 +68,11 @@ namespace TransportAutomation.src.DocumentProcessors.docx
                 string selectedText = selected.Val;
                 return selectedText;
             }
+
+            else if (cell.InnerText.Contains("FORMTEXT"))
+            {
+                return "(empty)";
+            }
             else
             {
                 return cell.InnerText;

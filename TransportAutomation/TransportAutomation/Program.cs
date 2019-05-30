@@ -28,20 +28,40 @@ namespace TransportAutomation
                     {
                         WordprocessingDocument document = d.openWordDocument(fileName, true);
                         // Body docBody = d.getWordDocumentBody(document);
-                        TableCell cell0 = d.DAIRCellGetter(document, 3, 0, 0);
-                        TableCell cell1 = d.DAIRCellGetter(document, 3, 0, 1);
-                        TableCell cell2 = d.DAIRCellGetter(document, 0, 2, 2);
-                        string text0 = d.DAIRCellTextGetter(cell0);
-                        string text1 = d.DAIRCellTextGetter(cell1);
-                        string text2 = d.DAIRCellTextGetter(cell2);
-                        //Table table = document.MainDocumentPart.Document.Body.Elements<Table>().ElementAt(3);
-                        //TableRow row = table.Elements<TableRow>().ElementAt(0);
-                        //TableCell cell0 = row.Elements<TableCell>().ElementAt(0);
-                        //TableCell cell1 = row.Elements<TableCell>().ElementAt(1);
-                        //DropDownListFormField dd = cell0.Elements<DropDownListFormField>();
-                        Console.WriteLine(text0);
-                        Console.WriteLine(text1);
-                        Console.WriteLine(text2);
+                        int tableCounter;
+                        int rowCounter;
+                        int numRows;
+                        int numTables = 5;
+                        int cellCounter;
+                        int numCells = 4;
+
+                        for (tableCounter = 0; tableCounter < numTables; tableCounter++)
+                        {
+                            if (tableCounter == 0 || tableCounter == 1 || tableCounter == 4)
+                            {
+                                numRows = 8;
+                            }
+                            else if (tableCounter == 2)
+                            {
+                                numRows = 6;
+                            } 
+                            else
+                            {
+                                numRows = 5;
+                            }
+                            for (rowCounter = 0; rowCounter < numRows; rowCounter++)
+                            {
+                                for (cellCounter = 0; cellCounter < numCells; cellCounter++)
+                                {
+                                    TableCell cell = d.DAIRCellGetter(document, tableCounter, rowCounter, cellCounter);
+                                    string text = d.DAIRCellTextGetter(cell);
+                                    Console.Write(text + " ");
+                                }
+                                Console.Write("\n");
+                            }
+                            Console.Write("\n");
+                        } 
+                        
                         // commented out code for writing to word doc
                         //Paragraph para = docBody.AppendChild(new Paragraph());
                         //Run run = para.AppendChild(new Run());
