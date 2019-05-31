@@ -95,7 +95,7 @@ namespace TransportAutomation
                         
                         int numRows;
                         int numTables = docBody.Elements<Table>().Count();
-                        int numCells = 4;
+                        int numCells;
                         int tableCounter;
                         int rowCounter;
                         int cellCounter;
@@ -105,6 +105,7 @@ namespace TransportAutomation
                             numRows = docBody.Elements<Table>().ElementAt(tableCounter).Elements<TableRow>().Count();
                             for (rowCounter = 0; rowCounter < numRows; rowCounter++)
                             {
+                                numCells = docBody.Elements<Table>().ElementAt(tableCounter).Elements<TableRow>().ElementAt(rowCounter).Elements<TableCell>().Count();
                                 for (cellCounter = 0; cellCounter < numCells; cellCounter++)
                                 {
                                     TableCell cell = d.DAIRCellGetter(document, tableCounter, rowCounter, cellCounter);
@@ -116,10 +117,66 @@ namespace TransportAutomation
                             Console.Write("\n");
                         }
 
+                        string otherComments = "";
+                        string version = "";
+                        string completedBy = "";
                         // other comments
-                        Paragraph otherComments = docBody.Elements<Paragraph>().ElementAt(10);
-                        Console.WriteLine("\n" + otherComments.InnerText);
-                        Paragraph completedByParagraph = docBody.Elements<Paragraph>().ElementAt(12);
+                        foreach (var text in docBody.Descendants<Text>())
+                        {
+                            if (text.Text.Contains("OTHER"))
+                            {
+                                Run run = (Run)text.Parent;
+                                Paragraph para = (Paragraph)run.Parent;
+                                otherComments = para.InnerText.Trim();
+                                int garbage1 = otherComments.IndexOf(":");
+                                int garbage2 = otherComments.IndexOf("OTHER COMMENTS", StringComparison.OrdinalIgnoreCase);
+                                bool colon = (garbage1 != -1 && garbage1 <= 15);
+                                bool otherExists = garbage2 != -1;
+                                if (colon)
+                                {
+                                    otherComments = otherComments.Substring(garbage1+1).Trim();
+                                }
+                                else if (otherExists) {
+                                    otherComments = otherComments.Substring(garbage2 + 14).Trim();
+                                }
+
+                            }
+                            if (text.Text.IndexOf("completed by", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                Run run = (Run)text.Parent;
+                                Paragraph para = (Paragraph)run.Parent;
+                                completedBy = para.InnerText.Trim();
+                                //"Completed by:  ROBBIE NINGIURUVIKVersion: May 30, 2017"
+                                int versionIndex = completedBy.IndexOf("version", StringComparison.OrdinalIgnoreCase);
+                                bool versionExists = versionIndex >= 0;
+                                if (versionExists)
+                                {
+                                    string temp = completedBy;
+                                    string firstHalf = temp.Substring(0, versionIndex);
+                                    int completedByIndex = firstHalf.IndexOf("Completed by", StringComparison.OrdinalIgnoreCase);
+                                    completedBy = (firstHalf.Substring(0, completedByIndex) + firstHalf.Substring(completedByIndex)).Trim();
+                                    completedBy = d.garbageCollector(completedBy, "Completed by");
+                                    completedBy = d.garbageCollector(completedBy, ":");
+                                    string secondHalf = temp.Substring(versionIndex);
+                                    versionIndex = secondHalf.IndexOf("version", StringComparison.OrdinalIgnoreCase);
+                                    version = secondHalf.Substring(0, versionIndex) + secondHalf.Substring(versionIndex);
+                                    version = d.garbageCollector(version, "Version").Trim();
+                                    version = d.garbageCollector(version, ":").Trim();
+                                } else if (text.Text.IndexOf("version", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+
+                                } else
+                                {
+                                    completedBy = (d.garbageCollector(completedBy, "Completed by:")).Trim();
+                                    completedBy = (d.garbageCollector(completedBy, "FORMTEXT")).Trim();
+                                }
+                            }
+                        }
+                        otherComments = d.garbageCollector(otherComments, "FORMTEXT");
+                        Console.WriteLine("OTHER COMMENTS: " + otherComments);
+                        Console.WriteLine("Completed By: " + completedBy);
+                        Console.WriteLine("Version: " + version);
+                        /*Paragraph completedByParagraph = docBody.Elements<Paragraph>().ElementAt(12);
                         string completedByParagraphText = completedByParagraph.InnerText;
                         int index = completedByParagraphText.IndexOf("Version");
                         string completedByText;
@@ -130,7 +187,7 @@ namespace TransportAutomation
                             versionText = completedByParagraphText.Substring(index);
                             Console.WriteLine(completedByText);
                             Console.WriteLine(versionText);
-                        }
+                        } */
                         // commented out code for writing to word doc
                         //Paragraph para = docBody.AppendChild(new Paragraph());
                         //Run run = para.AppendChild(new Run());

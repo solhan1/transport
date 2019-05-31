@@ -78,9 +78,7 @@ namespace TransportAutomation.src.DocumentProcessors.docx
                     int index = text.IndexOf("FORMDROPDOWN");
                     if (index != -1)
                     {
-                        string before = text.Substring(0, index);
-                        string after = text.Substring(index + 12);
-                        formText = before + after;
+                        formText = garbageCollector(text, "FORMDROPDOWN");
                     }
                     return formText;
                 }
@@ -99,14 +97,10 @@ namespace TransportAutomation.src.DocumentProcessors.docx
                 string cellText = "(empty)";
                 if (text.Length > 8)
                 {
-                    
                     int index = text.IndexOf("FORMTEXT");
                     if (index != -1)
                     {
-                        string before = text.Substring(0, index);
-                        string after = text.Substring(index + 8);
-                        cellText = before + after;
-                        
+                        cellText = garbageCollector(text, "FORMTEXT");
                     }
                 }
                 return cellText;
@@ -116,6 +110,25 @@ namespace TransportAutomation.src.DocumentProcessors.docx
             {
                 return cell.InnerText;
             }
+
+            // gets rid of unwanted text in a string and returns the concatenated substrings
+           
+        }
+        public string garbageCollector(string src, string garbage)
+        {
+            src.Trim();
+            string clean;
+            int garbageIndex = src.IndexOf(garbage);
+            if (garbageIndex >= 0)
+            {
+                clean = src.Substring(0, garbageIndex) + src.Substring(garbageIndex + garbage.Length);
+                return garbageCollector(clean.Trim(), garbage);
+            } 
+            else
+            {
+                return src;
+            }
+            
         }
     }
 }
