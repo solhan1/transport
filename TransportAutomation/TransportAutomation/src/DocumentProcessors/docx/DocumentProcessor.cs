@@ -60,18 +60,57 @@ namespace TransportAutomation.src.DocumentProcessors.docx
 
         public string DAIRCellTextGetter(TableCell cell)
         {
-            if (cell.InnerText.Contains("FORMDROPDOWN"))
+            string text = cell.InnerText.Trim();
+            if (text.Contains("FORMDROPDOWN"))
             {
-                DropDownListFormField dropdown = cell.Elements<Paragraph>().First().Elements<Run>().First().Elements<FieldChar>().First().Elements<FormFieldData>().First().Elements<DropDownListFormField>().First();
-                int selectedIndex = dropdown.DropDownListSelection.Val;
-                ListEntryFormField selected = dropdown.Elements<ListEntryFormField>().ElementAt(selectedIndex);
-                string selectedText = selected.Val;
-                return selectedText;
+                bool containsYes = text.IndexOf("yes", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool containsNo = text.IndexOf("no", StringComparison.OrdinalIgnoreCase) >= 0;
+                if (containsYes)
+                {
+                    return "YES";
+                }
+                else if (containsNo)
+                {
+                    return "NO";
+                }
+                else if (text.Length > 12) {
+                    string formText = "";
+                    int index = text.IndexOf("FORMDROPDOWN");
+                    if (index != -1)
+                    {
+                        string before = text.Substring(0, index);
+                        string after = text.Substring(index + 12);
+                        formText = before + after;
+                    }
+                    return formText;
+                }
+                else
+                {
+                    DropDownListFormField dropdown = cell.Elements<Paragraph>().First().Elements<Run>().First().Elements<FieldChar>().First().Elements<FormFieldData>().First().Elements<DropDownListFormField>().First();
+                    int selectedIndex = dropdown.DropDownListSelection.Val;
+                    ListEntryFormField selected = dropdown.Elements<ListEntryFormField>().ElementAt(selectedIndex);
+                    string selectedText = selected.Val;
+                    return selectedText;
+                }
             }
 
-            else if (cell.InnerText.Contains("FORMTEXT"))
+            else if (text.Contains("FORMTEXT"))
             {
-                return "(empty)";
+                string cellText = "(empty)";
+                if (text.Length > 8)
+                {
+                    
+                    int index = text.IndexOf("FORMTEXT");
+                    if (index != -1)
+                    {
+                        string before = text.Substring(0, index);
+                        string after = text.Substring(index + 8);
+                        cellText = before + after;
+                        
+                    }
+                }
+                return cellText;
+
             }
             else
             {

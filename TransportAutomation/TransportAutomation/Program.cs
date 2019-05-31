@@ -26,29 +26,83 @@ namespace TransportAutomation
                 {
                     try
                     {
+                        // there is code that tries to cover cases where OC does not use the dropdowns, otherwise the code would be much cleaner
                         WordprocessingDocument document = d.openWordDocument(fileName, true);
                         Body docBody = d.getWordDocumentBody(document);
+
+                        Paragraph headerParagraph = docBody.Elements<Paragraph>().ElementAt(1);
+                        string headerParagraphText = headerParagraph.InnerText.Trim();
+
+                        Run airportNameRun = headerParagraph.Elements<Run>().ElementAt(3);
+                        string airportName = airportNameRun.InnerText;
+                        
+                        // if using dropdown
+                        if (airportName == "")
+                        {
+                            int dateIndex = headerParagraphText.IndexOf("date", StringComparison.OrdinalIgnoreCase);
+                            string tempAirportName = headerParagraphText.Substring(0, dateIndex);
+                            bool usedDd = headerParagraphText.IndexOf("FORMDROPDOWN", StringComparison.OrdinalIgnoreCase) >= 0;
+                            if (usedDd)
+                            {
+                                DropDownListFormField dropdown = airportNameRun.Elements<FieldChar>().First().Elements<FormFieldData>().First().Elements<DropDownListFormField>().First();
+                                int selectedIndex = dropdown.DropDownListSelection.Val;
+                                ListEntryFormField selected = dropdown.Elements<ListEntryFormField>().ElementAt(selectedIndex);
+                                airportName = selected.Val;
+                            }
+                        }
+                        Console.WriteLine("Airport: " + airportName);
+
+                        SdtRun monthDayYear = headerParagraph.Elements<SdtRun>().ElementAt(0);
+                        string monthDayYearText = monthDayYear.InnerText;
+                        Console.WriteLine("Date: " + monthDayYearText);
+
+                        string tempTimeText;
+                        string timeText;
+                        int timeIndex1 = headerParagraphText.IndexOf("time", StringComparison.OrdinalIgnoreCase);
+                        int timeIndex2 = headerParagraphText.IndexOf("time:", StringComparison.OrdinalIgnoreCase);
+                        bool withColon = timeIndex2 >= 0;
+                        bool noColon = timeIndex1 >= 0;
+                        int timeIndexEnd;
+                        if (withColon)
+                        {
+                            timeIndexEnd = 5;
+                            tempTimeText = headerParagraphText.Substring(timeIndex2);
+                        } else if (noColon) {
+                            timeIndexEnd = 4;
+                            tempTimeText = headerParagraphText.Substring(timeIndex1);
+                        } else
+                        {
+                            timeIndexEnd = 4;
+                            tempTimeText = "";
+                        }
+                        
+                        int garbageIndex = tempTimeText.IndexOf("FORMTEXT");
+                        tempTimeText = tempTimeText.Trim();
+                        if (garbageIndex >= 0)
+                        {
+                            timeText = (tempTimeText.Substring(timeIndexEnd, garbageIndex-timeIndexEnd) + tempTimeText.Substring(garbageIndex + 8)).Trim();
+                        }
+                        else
+                        {
+                            timeText = tempTimeText.Substring(timeIndexEnd).Trim();
+                        }
+                            
+                        Console.WriteLine("Time: " + timeText + "\n");
+                        
+
+
+
+                        
+                        int numRows;
+                        int numTables = docBody.Elements<Table>().Count();
+                        int numCells = 4;
                         int tableCounter;
                         int rowCounter;
-                        int numRows;
-                        int numTables = 5;
                         int cellCounter;
-                        int numCells = 4;
 
                         for (tableCounter = 0; tableCounter < numTables; tableCounter++)
                         {
-                            if (tableCounter == 0 || tableCounter == 1 || tableCounter == 4)
-                            {
-                                numRows = 8;
-                            }
-                            else if (tableCounter == 2)
-                            {
-                                numRows = 6;
-                            } 
-                            else
-                            {
-                                numRows = 5;
-                            }
+                            numRows = docBody.Elements<Table>().ElementAt(tableCounter).Elements<TableRow>().Count();
                             for (rowCounter = 0; rowCounter < numRows; rowCounter++)
                             {
                                 for (cellCounter = 0; cellCounter < numCells; cellCounter++)
@@ -82,6 +136,7 @@ namespace TransportAutomation
                         //Run run = para.AppendChild(new Run());
                         //run.AppendChild(new Text("Append text in body, but text is not saved - OpenWordprocessingDocumentReadonly"));
                         //document.MainDocumentPart.Document.Save();
+                        Console.WriteLine("-----------------------------------------------------");
                     }
                     catch (FileNotFoundException e)
                     {
