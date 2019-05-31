@@ -85,10 +85,19 @@ namespace TransportAutomation.src.DocumentProcessors.docx
                 else
                 {
                     DropDownListFormField dropdown = cell.Elements<Paragraph>().First().Elements<Run>().First().Elements<FieldChar>().First().Elements<FormFieldData>().First().Elements<DropDownListFormField>().First();
-                    int selectedIndex = dropdown.DropDownListSelection.Val;
-                    ListEntryFormField selected = dropdown.Elements<ListEntryFormField>().ElementAt(selectedIndex);
-                    string selectedText = selected.Val;
-                    return selectedText;
+                    var ddls = dropdown.DropDownListSelection;
+                    if (ddls == null)
+                    {
+                        return "(empty)";
+                    } else
+                    {
+                        int selectedIndex = dropdown.DropDownListSelection.Val;
+                        ListEntryFormField selected = dropdown.Elements<ListEntryFormField>().ElementAt(selectedIndex);
+                        string selectedText = selected.Val;
+                        return selectedText;
+                    }
+
+                    
                 }
             }
 

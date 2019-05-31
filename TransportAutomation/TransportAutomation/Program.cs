@@ -162,17 +162,21 @@ namespace TransportAutomation
                                     version = secondHalf.Substring(0, versionIndex) + secondHalf.Substring(versionIndex);
                                     version = d.garbageCollector(version, "Version").Trim();
                                     version = d.garbageCollector(version, ":").Trim();
-                                } else if (text.Text.IndexOf("version", StringComparison.OrdinalIgnoreCase) >= 0)
-                                {
-
                                 } else
                                 {
-                                    completedBy = (d.garbageCollector(completedBy, "Completed by:")).Trim();
+                                    completedBy = (d.garbageCollector(completedBy, "Completed by")).Trim();
+                                    completedBy = (d.garbageCollector(completedBy, ":")).Trim();
                                     completedBy = (d.garbageCollector(completedBy, "FORMTEXT")).Trim();
                                 }
+
+                            
+                            } else if (version == "" && text.Text.IndexOf("version", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                // TODO
                             }
                         }
                         otherComments = d.garbageCollector(otherComments, "FORMTEXT");
+                        otherComments = d.garbageCollector(otherComments, "OTHER COMMENTS:").Trim();
                         Console.WriteLine("OTHER COMMENTS: " + otherComments);
                         Console.WriteLine("Completed By: " + completedBy);
                         Console.WriteLine("Version: " + version);
