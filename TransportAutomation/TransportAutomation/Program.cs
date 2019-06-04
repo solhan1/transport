@@ -4,12 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TransportAutomation.src.DocumentProcessors.docx;
+using TransportAutomation.src.EmailHandler;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocumentFormat.OpenXml.Office.CustomUI;
 using System.IO;
 using System.Windows.Forms;
-
+using Microsoft.Office.Interop.Outlook;
+using TransportAutomation.src.Logger;
 
 namespace TransportAutomation
 {
@@ -17,206 +19,122 @@ namespace TransportAutomation
     {
         static void Main(string[] args)
         {
+            EmailHandler emailHandler = new EmailHandler();
             DocumentProcessor d = new DocumentProcessor();
-            string path = Directory.GetCurrentDirectory();
-            foreach (string fileName in Directory.GetFiles(path))
+
+            Console.WriteLine("Starting ... \n");
+
+            Console.WriteLine("If this is your first time running this program, you must process all emails (option 1).");
+            Console.WriteLine("\nPlease type in an option and press ENTER to proceed.");
+            Console.WriteLine("0: Exit.");
+            Console.WriteLine("1: Read all emails and download and sort all attachments.");
+            Console.WriteLine("2: Read new emails only, and download and sort all attachments.");
+            bool readAll = true;
+            int option;
+            while (true)
             {
-                string fileExtension = Path.GetExtension(fileName);
-                if (fileExtension == ".docx")
+                if (int.TryParse(Console.ReadLine(), out option))
                 {
-                    try
+                    if (option == 0)
                     {
-                        // there is code that tries to cover cases where OC does not use the dropdowns, otherwise the code would be much cleaner
-                        WordprocessingDocument document = d.openWordDocument(fileName, true);
-                        Body docBody = d.getWordDocumentBody(document);
+                        Environment.Exit(0);
+                    }
+                    else if (option == 1)
+                    {
+                        break;
+                    }
+                    else if (option == 2)
+                    {
+                        Console.WriteLine("Digging through your mailbox ...");
+                        readAll = false;
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid number. Please pick a number from 0 to 8.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Please enter a number.");
+                }
+            }
 
-                        Paragraph headerParagraph = docBody.Elements<Paragraph>().ElementAt(1);
-                        string headerParagraphText = headerParagraph.InnerText.Trim();
+            string currentPath = Directory.GetCurrentDirectory();
+            string errorPath = currentPath + "\\Failed Documents";
+            int year = DateTime.Now.Year;
+            int month = DateTime.Now.Month;
+            var now = DateTime.Now.ToString();
+            now = now.Replace(":", " ");
+            string logDirectory = currentPath + "\\Logs" + "\\" + year + "\\" + month;
+            string logPath = logDirectory + "\\" + now + ".txt";
+            Directory.CreateDirectory(logDirectory);
 
-                        Run airportNameRun = headerParagraph.Elements<Run>().ElementAt(3);
-                        string airportName = airportNameRun.InnerText;
-                        
-                        // if using dropdown
-                        if (airportName == "")
+            try
+            {
+                MAPIFolder reportsFolder = emailHandler.findMailFolder();
+
+                if (reportsFolder == null)
+                {
+                    MessageBox.Show("Could not find transport email directory.");
+                }
+                else
+                {
+                    Console.WriteLine("Checking for unprocessed emails ..\n");
+                    emailHandler.EnumerateFolders(reportsFolder, readAll);
+                }
+
+                Console.WriteLine("\nPlease enter the type of file to parse and store in the database. Ensure that all reports are closed.");
+                Console.WriteLine("NOTE: Only DAIR's (1) are available for parsing. Storing in the database is under development.");
+                Console.WriteLine("\nPlease type in an option and press ENTER to proceed.");
+                Console.WriteLine("0: Exit");
+                Console.WriteLine("1: DAIR");
+                Console.WriteLine("2: Journal");
+                Console.WriteLine("3: Image");
+                Console.WriteLine("4: DATMR/MATMR");
+                Console.WriteLine("5: Daily Report");
+                Console.WriteLine("6: SNOWIZ");
+                Console.WriteLine("7: Timesheet");
+                Console.WriteLine("8: Vehicle Insepection");
+                int x;
+                while (true)
+                {
+                    if (int.TryParse(Console.ReadLine(), out x))
+                    {
+                        if (x == 0)
                         {
-                            int dateIndex = headerParagraphText.IndexOf("date", StringComparison.OrdinalIgnoreCase);
-                            string tempAirportName = headerParagraphText.Substring(0, dateIndex);
-                            bool usedDd = headerParagraphText.IndexOf("FORMDROPDOWN", StringComparison.OrdinalIgnoreCase) >= 0;
-                            if (usedDd)
-                            {
-                                DropDownListFormField dropdown = airportNameRun.Elements<FieldChar>().First().Elements<FormFieldData>().First().Elements<DropDownListFormField>().First();
-                                int selectedIndex = dropdown.DropDownListSelection.Val;
-                                ListEntryFormField selected = dropdown.Elements<ListEntryFormField>().ElementAt(selectedIndex);
-                                airportName = selected.Val;
-                            }
+                            Environment.Exit(0);
                         }
-                        Console.WriteLine("Airport: " + airportName);
-
-                        SdtRun monthDayYear = headerParagraph.Elements<SdtRun>().ElementAt(0);
-                        string monthDayYearText = monthDayYear.InnerText;
-                        Console.WriteLine("Date: " + monthDayYearText);
-
-                        string tempTimeText;
-                        string timeText;
-                        int timeIndex1 = headerParagraphText.IndexOf("time", StringComparison.OrdinalIgnoreCase);
-                        int timeIndex2 = headerParagraphText.IndexOf("time:", StringComparison.OrdinalIgnoreCase);
-                        bool withColon = timeIndex2 >= 0;
-                        bool noColon = timeIndex1 >= 0;
-                        int timeIndexEnd;
-                        if (withColon)
+                        else if (x == 1)
                         {
-                            timeIndexEnd = 5;
-                            tempTimeText = headerParagraphText.Substring(timeIndex2);
-                        } else if (noColon) {
-                            timeIndexEnd = 4;
-                            tempTimeText = headerParagraphText.Substring(timeIndex1);
-                        } else
-                        {
-                            timeIndexEnd = 4;
-                            tempTimeText = "";
+                            string DAIRPath = emailHandler.DAIRPath;
+                            Console.WriteLine("Parsing DAIR's ...\n");
+                            d.DAIRparser(DAIRPath);
+                            break;
                         }
-                        
-                        int garbageIndex = tempTimeText.IndexOf("FORMTEXT");
-                        tempTimeText = tempTimeText.Trim();
-                        if (garbageIndex >= 0)
+                        else if (x > 8)
                         {
-                            timeText = (tempTimeText.Substring(timeIndexEnd, garbageIndex-timeIndexEnd) + tempTimeText.Substring(garbageIndex + 8)).Trim();
+                            Console.WriteLine("Invalid number. Please pick a number from 0 to 8.");
                         }
                         else
                         {
-                            timeText = tempTimeText.Substring(timeIndexEnd).Trim();
+                            Console.WriteLine("Currently unavailable.");
                         }
-                            
-                        Console.WriteLine("Time: " + timeText + "\n");
-                        
-
-
-
-                        
-                        int numRows;
-                        int numTables = docBody.Elements<Table>().Count();
-                        int numCells;
-                        int tableCounter;
-                        int rowCounter;
-                        int cellCounter;
-
-                        for (tableCounter = 0; tableCounter < numTables; tableCounter++)
-                        {
-                            numRows = docBody.Elements<Table>().ElementAt(tableCounter).Elements<TableRow>().Count();
-                            for (rowCounter = 0; rowCounter < numRows; rowCounter++)
-                            {
-                                numCells = docBody.Elements<Table>().ElementAt(tableCounter).Elements<TableRow>().ElementAt(rowCounter).Elements<TableCell>().Count();
-                                for (cellCounter = 0; cellCounter < numCells; cellCounter++)
-                                {
-                                    TableCell cell = d.DAIRCellGetter(document, tableCounter, rowCounter, cellCounter);
-                                    string text = d.DAIRCellTextGetter(cell);
-                                    Console.Write(text + " ");
-                                }
-                                Console.Write("\n");
-                            }
-                            Console.Write("\n");
-                        }
-
-                        string otherComments = "";
-                        string version = "";
-                        string completedBy = "";
-                        // other comments
-                        foreach (var text in docBody.Descendants<Text>())
-                        {
-                            if (text.Text.Contains("OTHER"))
-                            {
-                                Run run = (Run)text.Parent;
-                                Paragraph para = (Paragraph)run.Parent;
-                                otherComments = para.InnerText.Trim();
-                                int garbage1 = otherComments.IndexOf(":");
-                                int garbage2 = otherComments.IndexOf("OTHER COMMENTS", StringComparison.OrdinalIgnoreCase);
-                                bool colon = (garbage1 != -1 && garbage1 <= 15);
-                                bool otherExists = garbage2 != -1;
-                                if (colon)
-                                {
-                                    otherComments = otherComments.Substring(garbage1+1).Trim();
-                                }
-                                else if (otherExists) {
-                                    otherComments = otherComments.Substring(garbage2 + 14).Trim();
-                                }
-
-                            }
-                            if (text.Text.IndexOf("completed by", StringComparison.OrdinalIgnoreCase) >= 0)
-                            {
-                                Run run = (Run)text.Parent;
-                                Paragraph para = (Paragraph)run.Parent;
-                                completedBy = para.InnerText.Trim();
-                                //"Completed by:  ROBBIE NINGIURUVIKVersion: May 30, 2017"
-                                int versionIndex = completedBy.IndexOf("version", StringComparison.OrdinalIgnoreCase);
-                                bool versionExists = versionIndex >= 0;
-                                if (versionExists)
-                                {
-                                    string temp = completedBy;
-                                    string firstHalf = temp.Substring(0, versionIndex);
-                                    int completedByIndex = firstHalf.IndexOf("Completed by", StringComparison.OrdinalIgnoreCase);
-                                    completedBy = (firstHalf.Substring(0, completedByIndex) + firstHalf.Substring(completedByIndex)).Trim();
-                                    completedBy = d.garbageCollector(completedBy, "Completed by");
-                                    completedBy = d.garbageCollector(completedBy, ":");
-                                    string secondHalf = temp.Substring(versionIndex);
-                                    versionIndex = secondHalf.IndexOf("version", StringComparison.OrdinalIgnoreCase);
-                                    version = secondHalf.Substring(0, versionIndex) + secondHalf.Substring(versionIndex);
-                                    version = d.garbageCollector(version, "Version").Trim();
-                                    version = d.garbageCollector(version, ":").Trim();
-                                } else
-                                {
-                                    completedBy = (d.garbageCollector(completedBy, "Completed by")).Trim();
-                                    completedBy = (d.garbageCollector(completedBy, ":")).Trim();
-                                    completedBy = (d.garbageCollector(completedBy, "FORMTEXT")).Trim();
-                                }
-
-                            
-                            } else if (version == "" && text.Text.IndexOf("version", StringComparison.OrdinalIgnoreCase) >= 0)
-                            {
-                                // TODO
-                            }
-                        }
-                        otherComments = d.garbageCollector(otherComments, "FORMTEXT");
-                        otherComments = d.garbageCollector(otherComments, "OTHER COMMENTS:").Trim();
-                        Console.WriteLine("OTHER COMMENTS: " + otherComments);
-                        Console.WriteLine("Completed By: " + completedBy);
-                        Console.WriteLine("Version: " + version);
-                        /*Paragraph completedByParagraph = docBody.Elements<Paragraph>().ElementAt(12);
-                        string completedByParagraphText = completedByParagraph.InnerText;
-                        int index = completedByParagraphText.IndexOf("Version");
-                        string completedByText;
-                        string versionText;
-                        if (index != -1)
-                        {
-                            completedByText = completedByParagraphText.Substring(0, index);
-                            versionText = completedByParagraphText.Substring(index);
-                            Console.WriteLine(completedByText);
-                            Console.WriteLine(versionText);
-                        } */
-                        // commented out code for writing to word doc
-                        //Paragraph para = docBody.AppendChild(new Paragraph());
-                        //Run run = para.AppendChild(new Run());
-                        //run.AppendChild(new Text("Append text in body, but text is not saved - OpenWordprocessingDocumentReadonly"));
-                        //document.MainDocumentPart.Document.Save();
-                        Console.WriteLine("-----------------------------------------------------");
                     }
-                    catch (FileNotFoundException e)
+                    else
                     {
-                        MessageBox.Show("ERROR: The file:" + fileName + "was not found");
-                    }
-                    catch (IOException e)
-                    {
-                        MessageBox.Show("ERROR: Documents to be processed must not be open. Please close them and try again.");
-                        Environment.Exit(-1);
-                    }
-                    catch (Exception e)
-                    {
-                        MessageBox.Show("ERROR: Uncaught error, please contact IT. " + e);
+                        Console.WriteLine("Please enter a number.");
                     }
                 }
-                
             }
+            catch (System.Exception e)
+            {
+                Logger logger = new Logger(logPath);
+                logger.Append(e.Message);
+            }
+
             
-            
+
         }
     }
 }
